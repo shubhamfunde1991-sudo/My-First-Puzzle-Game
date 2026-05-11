@@ -2,10 +2,17 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>My Puzzle Game</title>
+  <title>Color Match</title>
 </head>
 <body>
-  <h1>My Puzzle Game</h1>
-  <p>Game coming soon</p>
+  <h1>Color Match</h1>
+  <button onclick="score = score + 1; document.getElementById('score').innerText = score;">
+    Tap Me
+  </button>
+  <p>Score: <span id="score">0</span></p>
+
+  <script>
+    let score = 0;
+  </script>
 </body>
 </html>
