@@ -2,14 +2,14 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Subway Runner</title>
+<title>Bike Subway Runner</title>
 <style>
 html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: linear-gradient(#7dd3fc, #fef08a);
   font-family: Arial, sans-serif;
+  background: linear-gradient(#7dd3fc, #fde68a);
 }
 
 #ui {
@@ -20,6 +20,7 @@ html, body {
   text-align: center;
   font-size: 22px;
   font-weight: bold;
+  z-index: 10;
 }
 
 canvas {
@@ -42,36 +43,41 @@ const ctx = canvas.getContext("2d");
 function resize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+  laneX = [
+    canvas.width * 0.30,
+    canvas.width * 0.50,
+    canvas.width * 0.70
+  ];
 }
-resize();
 window.addEventListener("resize", resize);
 
-const laneX = [canvas.width * 0.25, canvas.width * 0.5, canvas.width * 0.75];
+let laneX = [];
+resize();
 
 let lane = 1;
 let score = 0;
-let speed = 7;
+let speed = 8;
 
 let player = {
-  x: laneX[lane],
-  y: canvas.height - 140,
-  w: 36,
-  h: 58,
+  x: 0,
+  y: 0,
+  w: 48,
+  h: 60,
   vy: 0,
   jumping: false
 };
 
 let obstacle = {
   lane: 1,
-  y: -100,
-  w: 40,
-  h: 55
+  y: -120,
+  w: 48,
+  h: 70
 };
 
 function updateLane() {
   player.x = laneX[lane] - player.w / 2;
+  player.y = canvas.height - 150;
 }
-
 updateLane();
 
 function jump() {
@@ -83,14 +89,14 @@ function jump() {
 
 function newObstacle() {
   obstacle.lane = Math.floor(Math.random() * 3);
-  obstacle.y = -100;
+  obstacle.y = -140;
 }
 
 function resetGame() {
   score = 0;
-  speed = 7;
-  document.getElementById("score").innerText = score;
+  speed = 8;
   lane = 1;
+  document.getElementById("score").innerText = score;
   updateLane();
   newObstacle();
 }
@@ -99,21 +105,23 @@ function update() {
   player.y += player.vy;
   player.vy += 0.9;
 
-  if (player.y >= canvas.height - 140) {
-    player.y = canvas.height - 140;
+  const ground = canvas.height - 150;
+
+  if (player.y >= ground) {
+    player.y = ground;
     player.vy = 0;
     player.jumping = false;
   }
 
   obstacle.y += speed;
 
-  if (obstacle.y > canvas.height + 60) {
+  if (obstacle.y > canvas.height + 80) {
     score++;
     document.getElementById("score").innerText = score;
     newObstacle();
 
     if (score % 5 === 0) {
-      speed += 0.5;
+      speed += 0.6;
     }
   }
 
@@ -131,41 +139,74 @@ function update() {
 }
 
 function drawRoad() {
-  ctx.fillStyle = "#444";
-  ctx.fillRect(canvas.width * 0.15, 0, canvas.width * 0.7, canvas.height);
+  ctx.fillStyle = "#374151";
+  ctx.fillRect(canvas.width * 0.18, 0, canvas.width * 0.64, canvas.height);
 
   ctx.strokeStyle = "white";
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 5;
 
   ctx.beginPath();
-  ctx.moveTo(canvas.width * 0.38, 0);
-  ctx.lineTo(canvas.width * 0.38, canvas.height);
+  ctx.moveTo(canvas.width * 0.40, 0);
+  ctx.lineTo(canvas.width * 0.40, canvas.height);
   ctx.stroke();
 
   ctx.beginPath();
-  ctx.moveTo(canvas.width * 0.62, 0);
-  ctx.lineTo(canvas.width * 0.62, canvas.height);
+  ctx.moveTo(canvas.width * 0.60, 0);
+  ctx.lineTo(canvas.width * 0.60, canvas.height);
   ctx.stroke();
 }
 
 function drawPlayer() {
+  const x = player.x;
+  const y = player.y;
+
   ctx.fillStyle = "#2563eb";
-  ctx.fillRect(player.x, player.y, player.w, player.h);
+  ctx.fillRect(x + 8, y + 20, 32, 16);
+
+  ctx.fillStyle = "#111";
+  ctx.beginPath();
+  ctx.arc(x + 12, y + 44, 10, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(x + 36, y + 44, 10, 0, Math.PI * 2);
+  ctx.fill();
 
   ctx.fillStyle = "#fde68a";
   ctx.beginPath();
-  ctx.arc(player.x + 18, player.y - 10, 11, 0, Math.PI * 2);
+  ctx.arc(x + 24, y + 8, 8, 0, Math.PI * 2);
   ctx.fill();
 }
 
 function drawObstacle() {
   const ox = laneX[obstacle.lane] - obstacle.w / 2;
+
   ctx.fillStyle = "#ef4444";
   ctx.fillRect(ox, obstacle.y, obstacle.w, obstacle.h);
+
+  ctx.fillStyle = "#111";
+  ctx.beginPath();
+  ctx.arc(ox + 10, obstacle.y + obstacle.h, 8, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(ox + 38, obstacle.y + obstacle.h, 8, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawSky() {
+  ctx.fillStyle = "white";
+
+  ctx.beginPath();
+  ctx.arc(80, 60, 18, 0, Math.PI * 2);
+  ctx.arc(100, 52, 20, 0, Math.PI * 2);
+  ctx.arc(122, 60, 18, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawSky();
   drawRoad();
   drawObstacle();
   drawPlayer();
@@ -177,23 +218,24 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-let touchStartX = 0;
-let touchStartY = 0;
+let startX = 0;
+let startY = 0;
 
 canvas.addEventListener("touchstart", function(e) {
-  touchStartX = e.touches[0].clientX;
-  touchStartY = e.touches[0].clientY;
+  startX = e.touches[0].clientX;
+  startY = e.touches[0].clientY;
 });
 
 canvas.addEventListener("touchend", function(e) {
-  const dx = e.changedTouches[0].clientX - touchStartX;
-  const dy = e.changedTouches[0].clientY - touchStartY;
+  const dx = e.changedTouches[0].clientX - startX;
+  const dy = e.changedTouches[0].clientY - startY;
 
   if (Math.abs(dx) > Math.abs(dy)) {
     if (dx > 25 && lane < 2) {
       lane++;
       updateLane();
     }
+
     if (dx < -25 && lane > 0) {
       lane--;
       updateLane();
