@@ -2,25 +2,37 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Bike Subway Runner</title>
+<title>Candy Runner Ultimate</title>
 <style>
 html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
   font-family: Arial, sans-serif;
-  background: linear-gradient(#7dd3fc, #fde68a);
+  background: linear-gradient(#7dd3fc, #f9a8d4);
 }
 
 #ui {
   position: fixed;
-  top: 10px;
+  top: 8px;
   left: 0;
   width: 100%;
   text-align: center;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: bold;
-  z-index: 10;
+  z-index: 20;
+  color: #111827;
+}
+
+#hint {
+  position: fixed;
+  bottom: 10px;
+  width: 100%;
+  text-align: center;
+  font-size: 14px;
+  color: #111827;
+  opacity: 0.8;
+  z-index: 20;
 }
 
 canvas {
@@ -33,79 +45,166 @@ canvas {
 </head>
 <body>
 
-<div id="ui">Score: <span id="score">0</span></div>
+<div id="ui">
+  Score: <span id="score">0</span>
+</div>
+
+<div id="hint">
+  Swipe ← → to move, swipe ↑ to jump
+</div>
+
 <canvas id="game"></canvas>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
+let laneX = [];
+let roadOffset = 0;
+let particles = [];
+let clouds = [];
+let pulse = 0;
+
 function resize() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+
   laneX = [
     canvas.width * 0.30,
     canvas.width * 0.50,
     canvas.width * 0.70
   ];
 }
+resize();
 window.addEventListener("resize", resize);
 
-let laneX = [];
-resize();
+for (let i = 0; i < 4; i++) {
+  clouds.push({
+    x: Math.random() * canvas.width,
+    y: 40 + Math.random() * 100,
+    s: 0.3 + Math.random() * 0.5
+  });
+}
 
 let lane = 1;
 let score = 0;
-let speed = 8;
+let speed = 9;
+let gameOver = false;
 
 let player = {
   x: 0,
   y: 0,
-  w: 48,
-  h: 60,
+  w: 62,
+  h: 84,
   vy: 0,
   jumping: false
 };
 
 let obstacle = {
   lane: 1,
-  y: -120,
-  w: 48,
-  h: 70
+  y: -160,
+  w: 54,
+  h: 72,
+  type: "cake"
+};
+
+let coin = {
+  lane: 1,
+  y: -380,
+  r: 14
 };
 
 function updateLane() {
   player.x = laneX[lane] - player.w / 2;
-  player.y = canvas.height - 150;
+  player.y = canvas.height - 190;
 }
 updateLane();
 
+function playTone(freq, duration) {
+  try {
+    const audio = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+
+    osc.frequency.value = freq;
+    osc.type = "triangle";
+
+    osc.connect(gain);
+    gain.connect(audio.destination);
+
+    gain.gain.setValueAtTime(0.08, audio.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + duration / 1000);
+
+    osc.start();
+    osc.stop(audio.currentTime + duration / 1000);
+  } catch (e) {}
+}
+
 function jump() {
-  if (!player.jumping) {
-    player.vy = -18;
+  if (!player.jumping && !gameOver) {
+    player.vy = -20;
     player.jumping = true;
+    playTone(280, 80);
   }
+}
+
+function randomObstacleType() {
+  const list = ["cake", "donut", "lollipop"];
+  return list[Math.floor(Math.random() * list.length)];
 }
 
 function newObstacle() {
   obstacle.lane = Math.floor(Math.random() * 3);
-  obstacle.y = -140;
+  obstacle.y = -180;
+  obstacle.type = randomObstacleType();
+
+  coin.lane = Math.floor(Math.random() * 3);
+  coin.y = -420 - Math.random() * 220;
 }
 
 function resetGame() {
   score = 0;
-  speed = 8;
+  speed = 9;
   lane = 1;
+  gameOver = false;
+  particles = [];
   document.getElementById("score").innerText = score;
   updateLane();
   newObstacle();
 }
 
-function update() {
-  player.y += player.vy;
-  player.vy += 0.9;
+function emitParticles(x, y, color) {
+  for (let i = 0; i < 8; i++) {
+    particles.push({
+      x,
+      y,
+      dx: (Math.random() - 0.5) * 4,
+      dy: (Math.random() - 0.5) * 4,
+      life: 22,
+      color
+    });
+  }
+}
 
-  const ground = canvas.height - 150;
+function updateParticles() {
+  for (let p of particles) {
+    p.x += p.dx;
+    p.y += p.dy;
+    p.life--;
+  }
+  particles = particles.filter(p => p.life > 0);
+}
+
+function update() {
+  if (gameOver) return;
+
+  pulse += 0.08;
+  roadOffset += speed;
+
+  player.y += player.vy;
+  player.vy += 0.95;
+
+  const ground = canvas.height - 190;
 
   if (player.y >= ground) {
     player.y = ground;
@@ -114,6 +213,7 @@ function update() {
   }
 
   obstacle.y += speed;
+  coin.y += speed;
 
   if (obstacle.y > canvas.height + 80) {
     score++;
@@ -121,11 +221,13 @@ function update() {
     newObstacle();
 
     if (score % 5 === 0) {
-      speed += 0.6;
+      speed += 0.5;
+      playTone(500, 80);
     }
   }
 
   const ox = laneX[obstacle.lane] - obstacle.w / 2;
+  const cx = laneX[coin.lane];
 
   if (
     player.x < ox + obstacle.w &&
@@ -133,13 +235,60 @@ function update() {
     player.y < obstacle.y + obstacle.h &&
     player.y + player.h > obstacle.y
   ) {
-    alert("Game Over. Score: " + score);
-    resetGame();
+    playTone(120, 220);
+    emitParticles(player.x + 20, player.y + 20, "#ef4444");
+    gameOver = true;
+
+    setTimeout(function() {
+      alert("Game Over. Score: " + score);
+      resetGame();
+    }, 120);
+  }
+
+  if (
+    player.x < cx + 20 &&
+    player.x + player.w > cx - 20 &&
+    player.y < coin.y + 20 &&
+    player.y + player.h > coin.y - 20
+  ) {
+    score += 2;
+    document.getElementById("score").innerText = score;
+    emitParticles(cx, coin.y, "#facc15");
+    playTone(820, 70);
+    coin.y = -500;
+  }
+
+  if (
+    obstacle.lane === lane &&
+    obstacle.y > player.y + 20 &&
+    obstacle.y < player.y + 45 &&
+    player.jumping
+  ) {
+    score += 1;
+    document.getElementById("score").innerText = score;
+  }
+
+  updateParticles();
+
+  for (let c of clouds) {
+    c.x += c.s;
+    if (c.x > canvas.width + 40) c.x = -50;
+  }
+}
+
+function drawSky() {
+  for (let c of clouds) {
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, 18, 0, Math.PI * 2);
+    ctx.arc(c.x + 18, c.y - 8, 20, 0, Math.PI * 2);
+    ctx.arc(c.x + 36, c.y, 18, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 
 function drawRoad() {
-  ctx.fillStyle = "#374151";
+  ctx.fillStyle = "#6b7280";
   ctx.fillRect(canvas.width * 0.18, 0, canvas.width * 0.64, canvas.height);
 
   ctx.strokeStyle = "white";
@@ -154,62 +303,94 @@ function drawRoad() {
   ctx.moveTo(canvas.width * 0.60, 0);
   ctx.lineTo(canvas.width * 0.60, canvas.height);
   ctx.stroke();
+
+  for (let y = -(roadOffset % 60); y < canvas.height; y += 60) {
+    ctx.fillStyle = "#fef3c7";
+    ctx.fillRect(canvas.width * 0.49, y, 8, 28);
+  }
 }
 
 function drawPlayer() {
   const x = player.x;
-  const y = player.y;
+  const y = player.y + Math.sin(pulse) * 2;
 
-  ctx.fillStyle = "#2563eb";
-  ctx.fillRect(x + 8, y + 20, 32, 16);
+  ctx.fillStyle = "#f472b6";
+  ctx.fillRect(x + 8, y + 24, 44, 20);
 
-  ctx.fillStyle = "#111";
+  ctx.fillStyle = "#111827";
   ctx.beginPath();
-  ctx.arc(x + 12, y + 44, 10, 0, Math.PI * 2);
+  ctx.arc(x + 16, y + 52, 12, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.beginPath();
-  ctx.arc(x + 36, y + 44, 10, 0, Math.PI * 2);
+  ctx.arc(x + 46, y + 52, 12, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = "#fde68a";
   ctx.beginPath();
-  ctx.arc(x + 24, y + 8, 8, 0, Math.PI * 2);
+  ctx.arc(x + 30, y + 8, 11, 0, Math.PI * 2);
   ctx.fill();
 }
 
 function drawObstacle() {
-  const ox = laneX[obstacle.lane] - obstacle.w / 2;
+  const x = laneX[obstacle.lane];
+  const y = obstacle.y;
 
-  ctx.fillStyle = "#ef4444";
-  ctx.fillRect(ox, obstacle.y, obstacle.w, obstacle.h);
+  if (obstacle.type === "cake") {
+    ctx.fillStyle = "#fb7185";
+    ctx.fillRect(x - 24, y, 48, 34);
+  }
 
-  ctx.fillStyle = "#111";
+  if (obstacle.type === "lollipop") {
+    ctx.fillStyle = "#f59e0b";
+    ctx.beginPath();
+    ctx.arc(x, y + 18, 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(x - 3, y + 18, 6, 34);
+  }
+
+  if (obstacle.type === "donut") {
+    ctx.fillStyle = "#a78bfa";
+    ctx.beginPath();
+    ctx.arc(x, y + 20, 22, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#fde68a";
+    ctx.beginPath();
+    ctx.arc(x, y + 20, 9, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawCoin() {
+  const x = laneX[coin.lane];
+
+  ctx.fillStyle = "#facc15";
   ctx.beginPath();
-  ctx.arc(ox + 10, obstacle.y + obstacle.h, 8, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.arc(ox + 38, obstacle.y + obstacle.h, 8, 0, Math.PI * 2);
+  ctx.arc(x, coin.y, 14 + Math.sin(pulse) * 1.2, 0, Math.PI * 2);
   ctx.fill();
 }
 
-function drawSky() {
-  ctx.fillStyle = "white";
-
-  ctx.beginPath();
-  ctx.arc(80, 60, 18, 0, Math.PI * 2);
-  ctx.arc(100, 52, 20, 0, Math.PI * 2);
-  ctx.arc(122, 60, 18, 0, Math.PI * 2);
-  ctx.fill();
+function drawParticles() {
+  for (let p of particles) {
+    ctx.globalAlpha = p.life / 22;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
   drawSky();
   drawRoad();
+  drawCoin();
   drawObstacle();
   drawPlayer();
+  drawParticles();
 }
 
 function loop() {
@@ -227,6 +408,8 @@ canvas.addEventListener("touchstart", function(e) {
 });
 
 canvas.addEventListener("touchend", function(e) {
+  if (gameOver) return;
+
   const dx = e.changedTouches[0].clientX - startX;
   const dy = e.changedTouches[0].clientY - startY;
 
@@ -234,11 +417,13 @@ canvas.addEventListener("touchend", function(e) {
     if (dx > 25 && lane < 2) {
       lane++;
       updateLane();
+      playTone(420, 40);
     }
 
     if (dx < -25 && lane > 0) {
       lane--;
       updateLane();
+      playTone(420, 40);
     }
   } else {
     if (dy < -25) {
