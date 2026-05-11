@@ -2,156 +2,121 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Number Color Match</title>
+  <title>Endless Runner</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
       text-align: center;
+      font-family: Arial, sans-serif;
+      margin: 0;
       padding: 20px;
       background: #f5f5f5;
     }
 
-    h1 {
-      margin-bottom: 10px;
+    canvas {
+      border: 2px solid black;
+      background: white;
+      max-width: 100%;
     }
 
-    #target {
-      font-size: 28px;
-      margin: 20px 0;
-    }
-
-    #score, #time {
-      font-weight: bold;
-      font-size: 20px;
-    }
-
-    .tile {
-      width: 220px;
-      padding: 16px;
-      margin: 8px auto;
-      font-size: 22px;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      display: block;
-    }
-
-    .red { background: #ff6b6b; }
-    .blue { background: #74c0fc; }
-    .green { background: #8ce99a; }
-    .yellow { background: #ffe066; }
-
-    #message {
-      font-size: 18px;
+    button {
       margin-top: 12px;
-      min-height: 24px;
+      padding: 10px 18px;
+      font-size: 18px;
     }
   </style>
 </head>
 <body>
 
-  <h1>Number Color Match</h1>
-
+  <h2>Endless Runner</h2>
   <p>Score: <span id="score">0</span></p>
-  <p>Time: <span id="time">5</span></p>
 
-  <h2 id="target"></h2>
-
-  <div id="buttons"></div>
-
-  <p id="message"></p>
+  <canvas id="game" width="320" height="220"></canvas>
+  <br>
+  <button onclick="jump()">Jump</button>
 
   <script>
-    const colors = ['Red', 'Blue', 'Green', 'Yellow'];
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    let player = {
+      x: 40,
+      y: 170,
+      w: 20,
+      h: 20,
+      vy: 0,
+      jumping: false
+    };
+
+    let obstacle = {
+      x: 320,
+      y: 170,
+      w: 20,
+      h: 20
+    };
 
     let score = 0;
-    let correctAnswer = '';
-    let timer;
-    let timeLeft = 5;
+    let speed = 3;
 
-    function randomNumber() {
-      return Math.floor(Math.random() * 4) + 1;
+    function jump() {
+      if (!player.jumping) {
+        player.vy = -9;
+        player.jumping = true;
+      }
     }
 
-    function randomColor() {
-      return colors[Math.floor(Math.random() * colors.length)];
-    }
+    function update() {
+      player.y += player.vy;
+      player.vy += 0.5;
 
-    function startTimer() {
-      clearInterval(timer);
-
-      timeLeft = 5;
-      document.getElementById('time').innerText = timeLeft;
-
-      timer = setInterval(function () {
-        timeLeft--;
-        document.getElementById('time').innerText = timeLeft;
-
-        if (timeLeft <= 0) {
-          clearInterval(timer);
-          document.getElementById('message').innerText = 'Time up!';
-          score = 0;
-          document.getElementById('score').innerText = score;
-          setTimeout(newRound, 1000);
-        }
-      }, 1000);
-    }
-
-    function newRound() {
-      document.getElementById('message').innerText = '';
-
-      const targetNumber = randomNumber();
-      const targetColor = randomColor();
-
-      correctAnswer = targetNumber + ' ' + targetColor;
-
-      document.getElementById('target').innerText = 'Tap: ' + correctAnswer;
-
-      const options = [correctAnswer];
-
-      while (options.length < 4) {
-        const option = randomNumber() + ' ' + randomColor();
-        if (!options.includes(option)) {
-          options.push(option);
-        }
+      if (player.y >= 170) {
+        player.y = 170;
+        player.vy = 0;
+        player.jumping = false;
       }
 
-      options.sort(() => Math.random() - 0.5);
+      obstacle.x -= speed;
 
-      let html = '';
-
-      for (let option of options) {
-        const colorClass = option.split(' ')[1].toLowerCase();
-
-        html += `
-          <button class="tile ${colorClass}" onclick="check('${option}')">
-            ${option}
-          </button>
-        `;
-      }
-
-      document.getElementById('buttons').innerHTML = html;
-
-      startTimer();
-    }
-
-    function check(choice) {
-      clearInterval(timer);
-
-      if (choice === correctAnswer) {
+      if (obstacle.x < -20) {
+        obstacle.x = 320;
         score++;
-        document.getElementById('score').innerText = score;
-        document.getElementById('message').innerText = 'Correct!';
-      } else {
-        document.getElementById('message').innerText = 'Wrong!';
-        score = 0;
-        document.getElementById('score').innerText = score;
+        document.getElementById("score").innerText = score;
+
+        if (score % 5 === 0) {
+          speed += 0.5;
+        }
       }
 
-      setTimeout(newRound, 500);
+      if (
+        player.x < obstacle.x + obstacle.w &&
+        player.x + player.w > obstacle.x &&
+        player.y < obstacle.y + obstacle.h &&
+        player.y + player.h > obstacle.y
+      ) {
+        alert("Game Over. Score: " + score);
+        score = 0;
+        speed = 3;
+        obstacle.x = 320;
+        player.y = 170;
+        document.getElementById("score").innerText = score;
+      }
     }
 
-    newRound();
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillRect(player.x, player.y, player.w, player.h);
+      ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    document.addEventListener("click", jump);
+
+    loop();
   </script>
 
 </body>
