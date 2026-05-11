@@ -3,13 +3,63 @@
 <head>
   <meta charset="UTF-8">
   <title>Number Color Match</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    #target {
+      font-size: 28px;
+      margin: 20px 0;
+    }
+
+    #score, #time {
+      font-weight: bold;
+      font-size: 20px;
+    }
+
+    .tile {
+      width: 220px;
+      padding: 16px;
+      margin: 8px auto;
+      font-size: 22px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: block;
+    }
+
+    .red { background: #ff6b6b; }
+    .blue { background: #74c0fc; }
+    .green { background: #8ce99a; }
+    .yellow { background: #ffe066; }
+
+    #message {
+      font-size: 18px;
+      margin-top: 12px;
+      min-height: 24px;
+    }
+  </style>
 </head>
 <body>
-  <h2 id="target"></h2>
+
+  <h1>Number Color Match</h1>
+
   <p>Score: <span id="score">0</span></p>
   <p>Time: <span id="time">5</span></p>
 
+  <h2 id="target"></h2>
+
   <div id="buttons"></div>
+
+  <p id="message"></p>
 
   <script>
     const colors = ['Red', 'Blue', 'Green', 'Yellow'];
@@ -23,6 +73,10 @@
       return Math.floor(Math.random() * 4) + 1;
     }
 
+    function randomColor() {
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+
     function startTimer() {
       clearInterval(timer);
 
@@ -33,19 +87,21 @@
         timeLeft--;
         document.getElementById('time').innerText = timeLeft;
 
-        if (timeLeft === 0) {
+        if (timeLeft <= 0) {
           clearInterval(timer);
-          alert('Time up! Final score: ' + score);
+          document.getElementById('message').innerText = 'Time up!';
           score = 0;
           document.getElementById('score').innerText = score;
-          newRound();
+          setTimeout(newRound, 1000);
         }
       }, 1000);
     }
 
     function newRound() {
+      document.getElementById('message').innerText = '';
+
       const targetNumber = randomNumber();
-      const targetColor = colors[Math.floor(Math.random() * colors.length)];
+      const targetColor = randomColor();
 
       correctAnswer = targetNumber + ' ' + targetColor;
 
@@ -54,11 +110,7 @@
       const options = [correctAnswer];
 
       while (options.length < 4) {
-        const option =
-          randomNumber() +
-          ' ' +
-          colors[Math.floor(Math.random() * colors.length)];
-
+        const option = randomNumber() + ' ' + randomColor();
         if (!options.includes(option)) {
           options.push(option);
         }
@@ -69,7 +121,13 @@
       let html = '';
 
       for (let option of options) {
-        html += `<button onclick="check('${option}')">${option}</button><br><br>`;
+        const colorClass = option.split(' ')[1].toLowerCase();
+
+        html += `
+          <button class="tile ${colorClass}" onclick="check('${option}')">
+            ${option}
+          </button>
+        `;
       }
 
       document.getElementById('buttons').innerHTML = html;
@@ -83,17 +141,18 @@
       if (choice === correctAnswer) {
         score++;
         document.getElementById('score').innerText = score;
+        document.getElementById('message').innerText = 'Correct!';
       } else {
-        alert('Game Over. Final score: ' + score);
+        document.getElementById('message').innerText = 'Wrong!';
         score = 0;
         document.getElementById('score').innerText = score;
       }
 
-      newRound();
+      setTimeout(newRound, 500);
     }
 
     newRound();
   </script>
+
 </body>
 </html>
-      
