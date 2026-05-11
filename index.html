@@ -1,152 +1,151 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Color Runner</title>
-  <style>
-    body {
-      margin: 0;
-      text-align: center;
-      font-family: Arial, sans-serif;
-      background: linear-gradient(to bottom, #7dd3fc, #fef08a);
-    }
+<meta charset="UTF-8">
+<title>Subway Runner</title>
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: linear-gradient(#7dd3fc, #fef08a);
+  font-family: Arial, sans-serif;
+}
 
-    h2 {
-      margin-top: 10px;
-      margin-bottom: 6px;
-    }
+#ui {
+  position: fixed;
+  top: 10px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
+}
 
-    #scoreBox {
-      font-size: 22px;
-      font-weight: bold;
-      margin-bottom: 8px;
-    }
-
-    canvas {
-      background: white;
-      border-radius: 12px;
-      width: 100%;
-      max-width: 420px;
-      touch-action: manipulation;
-    }
-
-    button {
-      margin-top: 12px;
-      padding: 14px 26px;
-      font-size: 22px;
-      border: none;
-      border-radius: 12px;
-      background: #22c55e;
-      color: white;
-    }
-  </style>
+canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  touch-action: none;
+}
+</style>
 </head>
 <body>
 
-<h2>Color Runner</h2>
-<div id="scoreBox">Score: <span id="score">0</span></div>
-
-<canvas id="game" width="420" height="260"></canvas>
-<br>
-<button id="jumpBtn">Jump</button>
+<div id="ui">Score: <span id="score">0</span></div>
+<canvas id="game"></canvas>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-const groundY = 180;
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener("resize", resize);
+
+const laneX = [canvas.width * 0.25, canvas.width * 0.5, canvas.width * 0.75];
+
+let lane = 1;
+let score = 0;
+let speed = 7;
 
 let player = {
-  x: 60,
-  y: groundY,
-  w: 34,
-  h: 42,
+  x: laneX[lane],
+  y: canvas.height - 140,
+  w: 36,
+  h: 58,
   vy: 0,
   jumping: false
 };
 
 let obstacle = {
-  x: 430,
-  y: groundY + 12,
-  w: 28,
-  h: 30
+  lane: 1,
+  y: -100,
+  w: 40,
+  h: 55
 };
 
-let coin = {
-  x: 650,
-  y: 120,
-  r: 10
-};
+function updateLane() {
+  player.x = laneX[lane] - player.w / 2;
+}
 
-let score = 0;
-let speed = 4;
+updateLane();
 
 function jump() {
   if (!player.jumping) {
-    player.vy = -13;
+    player.vy = -18;
     player.jumping = true;
   }
 }
 
+function newObstacle() {
+  obstacle.lane = Math.floor(Math.random() * 3);
+  obstacle.y = -100;
+}
+
 function resetGame() {
   score = 0;
-  speed = 4;
-  obstacle.x = 430;
-  coin.x = 650;
-  player.y = groundY;
-  player.vy = 0;
-  player.jumping = false;
+  speed = 7;
   document.getElementById("score").innerText = score;
+  lane = 1;
+  updateLane();
+  newObstacle();
 }
 
 function update() {
   player.y += player.vy;
-  player.vy += 0.7;
+  player.vy += 0.9;
 
-  if (player.y >= groundY) {
-    player.y = groundY;
+  if (player.y >= canvas.height - 140) {
+    player.y = canvas.height - 140;
     player.vy = 0;
     player.jumping = false;
   }
 
-  obstacle.x -= speed;
-  coin.x -= speed;
+  obstacle.y += speed;
 
-  if (obstacle.x < -obstacle.w) {
-    obstacle.x = 430 + Math.random() * 120;
+  if (obstacle.y > canvas.height + 60) {
     score++;
     document.getElementById("score").innerText = score;
+    newObstacle();
 
     if (score % 5 === 0) {
-      speed += 0.4;
+      speed += 0.5;
     }
   }
 
-  if (coin.x < -20) {
-    coin.x = 500 + Math.random() * 200;
-    coin.y = 90 + Math.random() * 50;
-  }
+  const ox = laneX[obstacle.lane] - obstacle.w / 2;
 
   if (
-    player.x < obstacle.x + obstacle.w &&
-    player.x + player.w > obstacle.x &&
+    player.x < ox + obstacle.w &&
+    player.x + player.w > ox &&
     player.y < obstacle.y + obstacle.h &&
     player.y + player.h > obstacle.y
   ) {
     alert("Game Over. Score: " + score);
     resetGame();
   }
+}
 
-  if (
-    player.x < coin.x + coin.r &&
-    player.x + player.w > coin.x - coin.r &&
-    player.y < coin.y + coin.r &&
-    player.y + player.h > coin.y - coin.r
-  ) {
-    score += 2;
-    document.getElementById("score").innerText = score;
-    coin.x = 500 + Math.random() * 200;
-  }
+function drawRoad() {
+  ctx.fillStyle = "#444";
+  ctx.fillRect(canvas.width * 0.15, 0, canvas.width * 0.7, canvas.height);
+
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 4;
+
+  ctx.beginPath();
+  ctx.moveTo(canvas.width * 0.38, 0);
+  ctx.lineTo(canvas.width * 0.38, canvas.height);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(canvas.width * 0.62, 0);
+  ctx.lineTo(canvas.width * 0.62, canvas.height);
+  ctx.stroke();
 }
 
 function drawPlayer() {
@@ -155,42 +154,19 @@ function drawPlayer() {
 
   ctx.fillStyle = "#fde68a";
   ctx.beginPath();
-  ctx.arc(player.x + 17, player.y - 8, 10, 0, Math.PI * 2);
+  ctx.arc(player.x + 18, player.y - 10, 11, 0, Math.PI * 2);
   ctx.fill();
 }
 
 function drawObstacle() {
+  const ox = laneX[obstacle.lane] - obstacle.w / 2;
   ctx.fillStyle = "#ef4444";
-  ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
-}
-
-function drawCoin() {
-  ctx.fillStyle = "#facc15";
-  ctx.beginPath();
-  ctx.arc(coin.x, coin.y, coin.r, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function drawGround() {
-  ctx.fillStyle = "#22c55e";
-  ctx.fillRect(0, groundY + 42, canvas.width, 18);
-}
-
-function drawSky() {
-  ctx.fillStyle = "#ffffff";
-  ctx.beginPath();
-  ctx.arc(90, 55, 16, 0, Math.PI * 2);
-  ctx.arc(110, 50, 18, 0, Math.PI * 2);
-  ctx.arc(130, 55, 16, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.fillRect(ox, obstacle.y, obstacle.w, obstacle.h);
 }
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  drawSky();
-  drawGround();
-  drawCoin();
+  drawRoad();
   drawObstacle();
   drawPlayer();
 }
@@ -201,20 +177,35 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-document.getElementById("jumpBtn").addEventListener("touchstart", function(e) {
-  e.preventDefault();
-  jump();
-});
-
-document.getElementById("jumpBtn").addEventListener("click", jump);
+let touchStartX = 0;
+let touchStartY = 0;
 
 canvas.addEventListener("touchstart", function(e) {
-  e.preventDefault();
-  jump();
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
 });
 
-canvas.addEventListener("click", jump);
+canvas.addEventListener("touchend", function(e) {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
 
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (dx > 25 && lane < 2) {
+      lane++;
+      updateLane();
+    }
+    if (dx < -25 && lane > 0) {
+      lane--;
+      updateLane();
+    }
+  } else {
+    if (dy < -25) {
+      jump();
+    }
+  }
+});
+
+newObstacle();
 loop();
 </script>
 
