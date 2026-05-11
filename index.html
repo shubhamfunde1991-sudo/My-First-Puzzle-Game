@@ -1,18 +1,64 @@
+
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Color Match</title>
+  <title>Number Color Match</title>
 </head>
 <body>
-  <h1>Color Match</h1>
-  <button onclick="score = score + 1; document.getElementById('score').innerText = score;">
-    Tap Me
-  </button>
+  <h2 id="target"></h2>
   <p>Score: <span id="score">0</span></p>
+  <div id="buttons"></div>
 
   <script>
+    const colors = ['Red', 'Blue', 'Green', 'Yellow'];
     let score = 0;
+    let correctAnswer = '';
+
+    function randomNumber() {
+      return Math.floor(Math.random() * 4) + 1;
+    }
+
+    function newRound() {
+      const targetNumber = randomNumber();
+      const targetColor = colors[Math.floor(Math.random() * colors.length)];
+      correctAnswer = targetNumber + ' ' + targetColor;
+
+      document.getElementById('target').innerText = 'Tap: ' + correctAnswer;
+
+      const options = [correctAnswer];
+
+      while (options.length < 4) {
+        const option = randomNumber() + ' ' + colors[Math.floor(Math.random() * colors.length)];
+        if (!options.includes(option)) {
+          options.push(option);
+        }
+      }
+
+      options.sort(() => Math.random() - 0.5);
+
+      let html = '';
+      for (let option of options) {
+        html += `<button onclick="check('${option}')">${option}</button><br><br>`;
+      }
+
+      document.getElementById('buttons').innerHTML = html;
+    }
+
+    function check(choice) {
+      if (choice === correctAnswer) {
+        score++;
+        document.getElementById('score').innerText = score;
+      } else {
+        alert('Game Over. Final score: ' + score);
+        score = 0;
+        document.getElementById('score').innerText = score;
+      }
+
+      newRound();
+    }
+
+    newRound();
   </script>
 </body>
 </html>
